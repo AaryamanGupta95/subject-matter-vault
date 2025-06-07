@@ -28,7 +28,6 @@ const Content = () => {
   
   const navigate = useNavigate();
 
-  // Fetch files from Python API
   const { data: apiFiles, isLoading } = useQuery({
     queryKey: ['uploadedFiles'],
     queryFn: async () => {
@@ -43,31 +42,27 @@ const Content = () => {
         return [];
       }
     },
-    refetchInterval: 5000, // Refetch every 5 seconds to stay updated
+    refetchInterval: 5000,
   });
 
-  // Load and merge files data
   useEffect(() => {
     const storedMetadata = JSON.parse(localStorage.getItem('uploadedFiles') || '[]');
     
     if (apiFiles && Array.isArray(apiFiles)) {
-      // Create a map of stored metadata by filename for quick lookup
       const metadataMap = new Map();
       storedMetadata.forEach((meta: UploadedFile) => {
         metadataMap.set(meta.fileName, meta);
       });
 
-      // Merge API files with localStorage metadata
       const mergedFiles = apiFiles.map((fileName: string) => {
         const metadata = metadataMap.get(fileName);
         
-        // Determine file type from extension
         const getFileTypeFromName = (name: string): 'text' | 'image' | 'video' => {
           const ext = name.split('.').pop()?.toLowerCase() || '';
           if (['txt', 'pdf', 'docx'].includes(ext)) return 'text';
           if (['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(ext)) return 'image';
           if (['mp4', 'avi', 'mov', 'wmv', 'flv'].includes(ext)) return 'video';
-          return 'text'; // default
+          return 'text';
         };
 
         return metadata || {
@@ -86,11 +81,9 @@ const Content = () => {
     }
   }, [apiFiles]);
 
-  // Filter files based on search term, subject, and file type
   useEffect(() => {
     let filtered = files;
 
-    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(file =>
         file.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -98,12 +91,10 @@ const Content = () => {
       );
     }
 
-    // Filter by subject
     if (selectedSubject !== 'all') {
       filtered = filtered.filter(file => file.subject === selectedSubject);
     }
 
-    // Filter by file type
     if (selectedFileType !== 'all') {
       filtered = filtered.filter(file => file.fileType === selectedFileType);
     }
@@ -161,181 +152,164 @@ const Content = () => {
   };
 
   const handleViewFile = (file: UploadedFile) => {
-    // Open file in new tab - this will work if your Python server serves static files
     const fileUrl = `http://localhost:8000/static/uploads/${file.fileName}`;
     window.open(fileUrl, '_blank');
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p>Loading content...</p>
-            </div>
-          </div>
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Loading content...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Content Library</h1>
-              <p className="text-muted-foreground">
-                Browse and manage your uploaded educational content from static/uploads
-              </p>
-            </div>
-            <Button onClick={() => navigate('/')}>
-              <UploadIcon className="mr-2 h-4 w-4" />
-              Upload New Content
-            </Button>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filters & Search
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search files..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-
-              {/* Subject Filter */}
-              <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All subjects" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Subjects</SelectItem>
-                  {getUniqueSubjects().map(subject => (
-                    <SelectItem key={subject} value={subject}>
-                      {subject.charAt(0).toUpperCase() + subject.slice(1).replace('-', ' ')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* File Type Filter */}
-              <Select value={selectedFileType} onValueChange={setSelectedFileType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All file types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All File Types</SelectItem>
-                  <SelectItem value="text">Text Documents</SelectItem>
-                  <SelectItem value="image">Images</SelectItem>
-                  <SelectItem value="video">Videos</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Clear Filters */}
-              <Button variant="outline" onClick={clearFilters}>
-                Clear Filters
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Results Summary */}
-        <div className="mb-6">
+    <div className="flex flex-col space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Content Library</h1>
           <p className="text-muted-foreground">
-            Showing {filteredFiles.length} of {files.length} files from static/uploads
+            Browse and manage your uploaded educational content from static/uploads
           </p>
         </div>
-
-        {/* Content Grid */}
-        {filteredFiles.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Content Found</h3>
-              <p className="text-muted-foreground text-center mb-4">
-                {files.length === 0 
-                  ? "No files found in static/uploads. Start by uploading your first file!"
-                  : "No files match your current filters. Try adjusting your search criteria."
-                }
-              </p>
-              <Button onClick={() => navigate('/')}>
-                <UploadIcon className="mr-2 h-4 w-4" />
-                Upload Content
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredFiles.map((file) => (
-              <Card key={file.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      {getFileTypeIcon(file.fileType)}
-                      <CardTitle className="text-lg truncate">
-                        {file.fileName}
-                      </CardTitle>
-                    </div>
-                  </div>
-                  <Badge 
-                    variant="secondary" 
-                    className={`w-fit ${getSubjectColor(file.subject)}`}
-                  >
-                    {file.subject.charAt(0).toUpperCase() + file.subject.slice(1).replace('-', ' ')}
-                  </Badge>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">File Type:</span>
-                      <span className="capitalize">{file.fileType}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Uploaded:</span>
-                      <span>{formatDate(file.uploadDate)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Status:</span>
-                      <Badge variant="outline" className="text-green-600 border-green-600">
-                        {file.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 pt-4 border-t">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full"
-                      onClick={() => handleViewFile(file)}
-                    >
-                      View File
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        <Button onClick={() => navigate('/upload')}>
+          <UploadIcon className="mr-2 h-4 w-4" />
+          Upload New Content
+        </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filters & Search
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search files..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+              <SelectTrigger>
+                <SelectValue placeholder="All subjects" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Subjects</SelectItem>
+                {getUniqueSubjects().map(subject => (
+                  <SelectItem key={subject} value={subject}>
+                    {subject.charAt(0).toUpperCase() + subject.slice(1).replace('-', ' ')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedFileType} onValueChange={setSelectedFileType}>
+              <SelectTrigger>
+                <SelectValue placeholder="All file types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All File Types</SelectItem>
+                <SelectItem value="text">Text Documents</SelectItem>
+                <SelectItem value="image">Images</SelectItem>
+                <SelectItem value="video">Videos</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button variant="outline" onClick={clearFilters}>
+              Clear Filters
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="mb-6">
+        <p className="text-muted-foreground">
+          Showing {filteredFiles.length} of {files.length} files from static/uploads
+        </p>
+      </div>
+
+      {filteredFiles.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Content Found</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              {files.length === 0 
+                ? "No files found in static/uploads. Start by uploading your first file!"
+                : "No files match your current filters. Try adjusting your search criteria."
+              }
+            </p>
+            <Button onClick={() => navigate('/upload')}>
+              <UploadIcon className="mr-2 h-4 w-4" />
+              Upload Content
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredFiles.map((file) => (
+            <Card key={file.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    {getFileTypeIcon(file.fileType)}
+                    <CardTitle className="text-lg truncate">
+                      {file.fileName}
+                    </CardTitle>
+                  </div>
+                </div>
+                <Badge 
+                  variant="secondary" 
+                  className={`w-fit ${getSubjectColor(file.subject)}`}
+                >
+                  {file.subject.charAt(0).toUpperCase() + file.subject.slice(1).replace('-', ' ')}
+                </Badge>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">File Type:</span>
+                    <span className="capitalize">{file.fileType}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Uploaded:</span>
+                    <span>{formatDate(file.uploadDate)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Status:</span>
+                    <Badge variant="outline" className="text-green-600 border-green-600">
+                      {file.status}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="mt-4 pt-4 border-t">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => handleViewFile(file)}
+                  >
+                    View File
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

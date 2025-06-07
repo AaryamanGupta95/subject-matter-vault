@@ -81,7 +81,6 @@ const Upload = () => {
     try {
       const formData = new FormData();
       
-      // Map file types to the Python API parameter names
       const fileParamMap = {
         'text': 'text_file',
         'image': 'image',
@@ -103,10 +102,8 @@ const Upload = () => {
       const result = await response.json();
       setUploadState(prev => ({ ...prev, assessmentResult: result }));
 
-      // Check if the file is safe
       const fileResult = result.assessment[paramName];
       if (fileResult === 'safe') {
-        // Save file metadata locally with subject info
         const fileData = {
           id: Date.now().toString(),
           subject: uploadState.subject,
@@ -126,7 +123,6 @@ const Upload = () => {
           description: "Your file has been safely uploaded and stored.",
         });
 
-        // Reset form
         setUploadState({
           subject: '',
           fileType: '',
@@ -206,115 +202,108 @@ const Upload = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Upload Educational Content</h1>
-          <p className="text-muted-foreground">
-            Upload files for your courses. All content goes through safety verification and is saved to static/uploads.
-          </p>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>File Upload</CardTitle>
-            <CardDescription>
-              Select the subject and file type, then upload your content.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Subject Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
-              <Select value={uploadState.subject} onValueChange={handleSubjectChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a subject" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mathematics">Mathematics</SelectItem>
-                  <SelectItem value="science">Science</SelectItem>
-                  <SelectItem value="english">English</SelectItem>
-                  <SelectItem value="history">History</SelectItem>
-                  <SelectItem value="geography">Geography</SelectItem>
-                  <SelectItem value="art">Art</SelectItem>
-                  <SelectItem value="music">Music</SelectItem>
-                  <SelectItem value="physical-education">Physical Education</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* File Type Selection */}
-            <div className="space-y-2">
-              <Label>File Type</Label>
-              <div className="grid grid-cols-3 gap-4">
-                {(['text', 'image', 'video'] as const).map((type) => (
-                  <Button
-                    key={type}
-                    variant={uploadState.fileType === type ? "default" : "outline"}
-                    className="h-20 flex-col gap-2"
-                    onClick={() => handleFileTypeChange(type)}
-                  >
-                    {getFileTypeIcon(type)}
-                    <span className="capitalize">{type}</span>
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* File Upload */}
-            {uploadState.fileType && (
-              <div className="space-y-2">
-                <Label htmlFor="file">
-                  Upload {uploadState.fileType.charAt(0).toUpperCase() + uploadState.fileType.slice(1)} File
-                </Label>
-                <Input
-                  id="file"
-                  type="file"
-                  accept={getAcceptedTypes()}
-                  onChange={handleFileChange}
-                  className="cursor-pointer"
-                />
-                {uploadState.file && (
-                  <p className="text-sm text-muted-foreground">
-                    Selected: {uploadState.file.name}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Assessment Result */}
-            {renderAssessmentResult()}
-
-            {/* Submit Button */}
-            <div className="flex gap-4">
-              <Button
-                onClick={assessFile}
-                disabled={!uploadState.file || !uploadState.subject || uploadState.isUploading}
-                className="flex-1"
-              >
-                {uploadState.isUploading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <UploadIcon className="mr-2 h-4 w-4" />
-                    Upload & Assess
-                  </>
-                )}
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={() => navigate('/content')}
-              >
-                View Content Library
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="flex flex-col space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold mb-2">Upload Educational Content</h1>
+        <p className="text-muted-foreground">
+          Upload files for your courses. All content goes through safety verification and is saved to static/uploads.
+        </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>File Upload</CardTitle>
+          <CardDescription>
+            Select the subject and file type, then upload your content.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="subject">Subject</Label>
+            <Select value={uploadState.subject} onValueChange={handleSubjectChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a subject" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mathematics">Mathematics</SelectItem>
+                <SelectItem value="science">Science</SelectItem>
+                <SelectItem value="english">English</SelectItem>
+                <SelectItem value="history">History</SelectItem>
+                <SelectItem value="geography">Geography</SelectItem>
+                <SelectItem value="art">Art</SelectItem>
+                <SelectItem value="music">Music</SelectItem>
+                <SelectItem value="physical-education">Physical Education</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>File Type</Label>
+            <div className="grid grid-cols-3 gap-4">
+              {(['text', 'image', 'video'] as const).map((type) => (
+                <Button
+                  key={type}
+                  variant={uploadState.fileType === type ? "default" : "outline"}
+                  className="h-20 flex-col gap-2"
+                  onClick={() => handleFileTypeChange(type)}
+                >
+                  {getFileTypeIcon(type)}
+                  <span className="capitalize">{type}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {uploadState.fileType && (
+            <div className="space-y-2">
+              <Label htmlFor="file">
+                Upload {uploadState.fileType.charAt(0).toUpperCase() + uploadState.fileType.slice(1)} File
+              </Label>
+              <Input
+                id="file"
+                type="file"
+                accept={getAcceptedTypes()}
+                onChange={handleFileChange}
+                className="cursor-pointer"
+              />
+              {uploadState.file && (
+                <p className="text-sm text-muted-foreground">
+                  Selected: {uploadState.file.name}
+                </p>
+              )}
+            </div>
+          )}
+
+          {renderAssessmentResult()}
+
+          <div className="flex gap-4">
+            <Button
+              onClick={assessFile}
+              disabled={!uploadState.file || !uploadState.subject || uploadState.isUploading}
+              className="flex-1"
+            >
+              {uploadState.isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <UploadIcon className="mr-2 h-4 w-4" />
+                  Upload & Assess
+                </>
+              )}
+            </Button>
+            
+            <Button
+              variant="outline"
+              onClick={() => navigate('/my-content')}
+            >
+              View Content Library
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
