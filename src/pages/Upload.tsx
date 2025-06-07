@@ -91,8 +91,6 @@ const Upload = () => {
       const paramName = fileParamMap[uploadState.fileType];
       formData.append(paramName, uploadState.file);
 
-      // Note: In a real implementation, this would call your Python API
-      // For now, we'll simulate the API response
       const response = await fetch('http://localhost:8000/assess', {
         method: 'POST',
         body: formData,
@@ -108,14 +106,15 @@ const Upload = () => {
       // Check if the file is safe
       const fileResult = result.assessment[paramName];
       if (fileResult === 'safe') {
-        // Save file metadata locally (simulating local storage)
+        // Save file metadata locally with subject info
         const fileData = {
           id: Date.now().toString(),
           subject: uploadState.subject,
           fileName: uploadState.file.name,
           fileType: uploadState.fileType,
           uploadDate: new Date().toISOString(),
-          status: 'safe'
+          status: 'safe',
+          filePath: `static/uploads/${uploadState.file.name}`
         };
         
         const existingFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '[]');
@@ -195,7 +194,7 @@ const Upload = () => {
               </p>
               <p className="text-sm text-muted-foreground">
                 {isSafe 
-                  ? 'Your file has passed all safety checks and has been saved.'
+                  ? 'Your file has passed all safety checks and has been saved to static/uploads.'
                   : 'The file contains inappropriate content and cannot be uploaded.'
                 }
               </p>
@@ -212,7 +211,7 @@ const Upload = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Upload Educational Content</h1>
           <p className="text-muted-foreground">
-            Upload files for your courses. All content goes through safety verification.
+            Upload files for your courses. All content goes through safety verification and is saved to static/uploads.
           </p>
         </div>
 

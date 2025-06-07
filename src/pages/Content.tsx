@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText, Image, Video, Search, Filter, Upload as UploadIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 
 interface UploadedFile {
   id: string;
@@ -15,6 +16,7 @@ interface UploadedFile {
   fileType: 'text' | 'image' | 'video';
   uploadDate: string;
   status: string;
+  filePath?: string;
 }
 
 const Content = () => {
@@ -26,12 +28,63 @@ const Content = () => {
   
   const navigate = useNavigate();
 
-  // Load files from localStorage on component mount
+  // Fetch files from Python API
+  const { data: apiFiles, isLoading } = useQuery({
+    queryKey: ['uploadedFiles'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('http://localhost:8000/list-uploads');
+        if (!response.ok) {
+          throw new Error('Failed to fetch files');
+        }
+        return await response.json();
+      } catch (error) {
+        console.error('Error fetching files from API:', error);
+        return [];
+      }
+    },
+    refetchInterval: 5000, // Refetch every 5 seconds to stay updated
+  });
+
+  // Load and merge files data
   useEffect(() => {
-    const storedFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '[]');
-    setFiles(storedFiles);
-    setFilteredFiles(storedFiles);
-  }, []);
+    const storedMetadata = JSON.parse(localStorage.getItem('uploadedFiles') || '[]');
+    
+    if (apiFiles && Array.isArray(apiFiles)) {
+      // Create a map of stored metadata by filename for quick lookup
+      const metadataMap = new Map();
+      storedMetadata.forEach((meta: UploadedFile) => {
+        metadataMap.set(meta.fileName, meta);
+      });
+
+      // Merge API files with localStorage metadata
+      const mergedFiles = apiFiles.map((fileName: string) => {
+        const metadata = metadataMap.get(fileName);
+        
+        // Determine file type from extension
+        const getFileTypeFromName = (name: string): 'text' | 'image' | 'video' => {
+          const ext = name.split('.').pop()?.toLowerCase() || '';
+          if (['txt', 'pdf', 'docx'].includes(ext)) return 'text';
+          if (['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(ext)) return 'image';
+          if (['mp4', 'avi', 'mov', 'wmv', 'flv'].includes(ext)) return 'video';
+          return 'text'; // default
+        };
+
+        return metadata || {
+          id: fileName,
+          subject: 'unknown',
+          fileName: fileName,
+          fileType: getFileTypeFromName(fileName),
+          uploadDate: new Date().toISOString(),
+          status: 'safe',
+          filePath: `static/uploads/${fileName}`
+        };
+      });
+
+      setFiles(mergedFiles);
+      setFilteredFiles(mergedFiles);
+    }
+  }, [apiFiles]);
 
   // Filter files based on search term, subject, and file type
   useEffect(() => {
@@ -80,7 +133,8 @@ const Content = () => {
       'geography': 'bg-teal-100 text-teal-800',
       'art': 'bg-pink-100 text-pink-800',
       'music': 'bg-yellow-100 text-yellow-800',
-      'physical-education': 'bg-red-100 text-red-800'
+      'physical-education': 'bg-red-100 text-red-800',
+      'unknown': 'bg-gray-100 text-gray-800'
     };
     return colors[subject] || 'bg-gray-100 text-gray-800';
   };
@@ -106,6 +160,27 @@ const Content = () => {
     setSelectedFileType('all');
   };
 
+  const handleViewFile = (file: UploadedFile) => {
+    // Open file in new tab - this will work if your Python server serves static files
+    const fileUrl = `http://localhost:8000/static/uploads/${file.fileName}`;
+    window.open(fileUrl, '_blank');
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p>Loading content...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto">
@@ -115,7 +190,7 @@ const Content = () => {
             <div>
               <h1 className="text-3xl font-bold mb-2">Content Library</h1>
               <p className="text-muted-foreground">
-                Browse and manage your uploaded educational content
+                Browse and manage your uploaded educational content from static/uploads
               </p>
             </div>
             <Button onClick={() => navigate('/')}>
@@ -185,7 +260,7 @@ const Content = () => {
         {/* Results Summary */}
         <div className="mb-6">
           <p className="text-muted-foreground">
-            Showing {filteredFiles.length} of {files.length} files
+            Showing {filteredFiles.length} of {files.length} files from static/uploads
           </p>
         </div>
 
@@ -197,7 +272,7 @@ const Content = () => {
               <h3 className="text-lg font-semibold mb-2">No Content Found</h3>
               <p className="text-muted-foreground text-center mb-4">
                 {files.length === 0 
-                  ? "You haven't uploaded any content yet. Start by uploading your first file!"
+                  ? "No files found in static/uploads. Start by uploading your first file!"
                   : "No files match your current filters. Try adjusting your search criteria."
                 }
               </p>
@@ -246,7 +321,12 @@ const Content = () => {
                   </div>
                   
                   <div className="mt-4 pt-4 border-t">
-                    <Button variant="outline" size="sm" className="w-full">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => handleViewFile(file)}
+                    >
                       View File
                     </Button>
                   </div>
